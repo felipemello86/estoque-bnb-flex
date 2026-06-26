@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h1>
+  <span class="text-muted small">{{ empresa }}</span>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-box-seam text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ total_produtos }}</div>
+        <div class="stat-label">Total de Produtos</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef2f2">
+        <i class="bi bi-exclamation-triangle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-value text-danger">{{ em_alerta }}</div>
+        <div class="stat-label">Em Alerta de Estoque</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-arrow-left-right text-success"></i>
+      </div>
+      <div>
+        <div class="stat-value text-success">{{ movimentos_hoje }}</div>
+        <div class="stat-label">Movimentos Hoje</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fefce8">
+        <i class="bi bi-whatsapp" style="color:#25d366;font-size:1.5rem"></i>
+      </div>
+      <div>
+        <div class="stat-value" style="font-size:1rem;color:#64748b" id="wppStatus">—</div>
+        <div class="stat-label">Status WhatsApp</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Alertas -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Produtos em Alerta</span>
+        <a href="/produtos?alerta=1" class="btn btn-sm btn-outline-danger">Ver todos</a>
+      </div>
+      <div class="card-body p-0">
+        {% if alertas %}
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Produto</th><th>Atual</th><th>Mínimo</th></tr></thead>
+          <tbody>
+          {% for p in alertas %}
+          <tr>
+            <td><strong>{{ p.nome }}</strong><br><small class="text-muted">{{ p.categoria }}</small></td>
+            <td><span class="badge badge-alerta">{{ p.quantidade }} {{ p.unidade }}</span></td>
+            <td class="text-muted">{{ p.estoque_minimo }} {{ p.unidade }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-check-circle fs-2 text-success"></i><br>
+          <span>Nenhum produto em alerta!</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Últimos movimentos -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-1"></i> Últimos Movimentos</span>
+        <a href="/movimentos" class="btn btn-sm btn-outline-primary">Ver todos</a>
+      </div>
+      <div class="card-body p-0">
+        {% if ultimos_movimentos %}
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Obs.</th></tr></thead>
+          <tbody>
+          {% for m in ultimos_movimentos %}
+          <tr>
+            <td class="text-muted" style="white-space:nowrap;font-size:.8rem">
+              {{ m.criado_em[:16] }}
+            </td>
+            <td>{{ m.produto_nome }}</td>
+            <td>
+              {% if m.tipo == 'entrada' %}
+              <span class="badge badge-ok"><i class="bi bi-plus-lg"></i> Entrada</span>
+              {% else %}
+              <span class="badge badge-alerta"><i class="bi bi-dash-lg"></i> Saída</span>
+              {% endif %}
+            </td>
+            <td>{{ m.quantidade }} {{ m.unidade }}</td>
+            <td class="text-muted" style="font-size:.8rem">{{ m.observacao or '—' }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-inbox fs-2"></i><br>Nenhum movimento registrado.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Verifica status WhatsApp
+fetch('/api/whatsapp/teste', {method:'POST'})
+  .then(r => r.json())
+  .then(d => {
+    const el = document.getElementById('wppStatus');
+    el.textContent = d.ok ? 'Conectado' : 'Desconectado';
+    el.style.color = d.ok ? '#16a34a' : '#dc2626';
+  }).catch(() => {
+    document.getElementById('wppStatus').textContent = 'Não config.';
+  });
+</script>
+{% endblock %}

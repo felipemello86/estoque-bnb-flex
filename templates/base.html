@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Estoque{% endblock %} — {{ empresa }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --sidebar-width: 240px;
+      --brand-color: #2563eb;
+      --brand-dark: #1d4ed8;
+    }
+    body { background: #f1f5f9; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: #1e293b;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 22px 20px;
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sidebar-brand i { font-size: 1.5rem; color: #60a5fa; }
+    .sidebar-label {
+      padding: 14px 20px 4px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .sidebar .nav-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      color: #94a3b8;
+      border-radius: 0;
+      font-size: .9rem;
+      transition: all .15s;
+    }
+    .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.06); }
+    .sidebar .nav-link.active { color: #fff; background: var(--brand-color); }
+    .sidebar .nav-link i { font-size: 1.05rem; width: 20px; }
+
+    /* Main */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      padding: 28px 32px;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0; }
+
+    /* Cards */
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+      display: flex; align-items: center; gap: 16px;
+    }
+    .stat-icon {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .stat-value { font-size: 1.9rem; font-weight: 800; color: #1e293b; line-height: 1; }
+    .stat-label { font-size: .8rem; color: #64748b; margin-top: 2px; }
+
+    .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+    .card-header { background: #fff; border-bottom: 1px solid #e2e8f0; font-weight: 600; }
+
+    /* Table */
+    .table th { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+    .table td { vertical-align: middle; font-size: .9rem; }
+
+    /* Badge alerta */
+    .badge-alerta { background: #fef2f2; color: #dc2626; font-weight: 600; }
+    .badge-ok { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+
+    /* Toast */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; height: auto; position: static; }
+      .main-content { margin-left: 0; padding: 16px; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <i class="bi bi-boxes"></i>
+      <span>{{ empresa }}</span>
+    </div>
+    <div class="sidebar-label">Menu</div>
+    <nav>
+      <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="/produtos" class="nav-link {% if request.path.startswith('/produtos') %}active{% endif %}">
+        <i class="bi bi-box-seam"></i> Produtos
+      </a>
+      <a href="/movimentos" class="nav-link {% if request.path.startswith('/movimentos') %}active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Movimentos
+      </a>
+      <a href="/relatorio" class="nav-link {% if request.path.startswith('/relatorio') %}active{% endif %}">
+        <i class="bi bi-bar-chart-line"></i> Relatório
+      </a>
+    </nav>
+    <div class="sidebar-label mt-3">Sistema</div>
+    <nav>
+      <a href="/configuracoes" class="nav-link {% if request.path.startswith('/configuracoes') %}active{% endif %}">
+        <i class="bi bi-gear"></i> Configurações
+      </a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Toast -->
+  <div class="toast-container">
+    <div id="toastMsg" class="toast align-items-center border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body fw-semibold" id="toastText"></div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function showToast(msg, type='success') {
+      const el = document.getElementById('toastMsg');
+      const txt = document.getElementById('toastText');
+      el.className = `toast align-items-center border-0 text-bg-${type}`;
+      txt.textContent = msg;
+      bootstrap.Toast.getOrCreateInstance(el, {delay:3500}).show();
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

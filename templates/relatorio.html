@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Relatório{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-bar-chart-line me-2 text-primary"></i>Relatório</h1>
+  <button class="btn btn-outline-secondary" onclick="window.print()">
+    <i class="bi bi-printer"></i> Imprimir
+  </button>
+</div>
+
+<!-- Filtros de data -->
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto"><label class="form-label mb-0">Período:</label></div>
+      <div class="col-auto">
+        <input type="date" id="dataIni" class="form-control form-control-sm">
+      </div>
+      <div class="col-auto"><span class="text-muted">até</span></div>
+      <div class="col-auto">
+        <input type="date" id="dataFim" class="form-control form-control-sm">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-primary" onclick="carregarRelatorio()">
+          <i class="bi bi-search"></i> Gerar
+        </button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-outline-secondary" onclick="limparFiltros()">
+          Todos
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-plus-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-value text-success" id="totalEntradas">—</div>
+        <div class="stat-label">Total Entradas</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef2f2">
+        <i class="bi bi-dash-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-value text-danger" id="totalSaidas">—</div>
+        <div class="stat-label">Total Saídas</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef2f2">
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-value text-warning" id="totalAlertas">—</div>
+        <div class="stat-label">Em Alerta</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Por produto -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">Movimentos por Produto</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Unidade</th>
+              <th class="text-success">Entradas</th>
+              <th class="text-danger">Saídas</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyProdutos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header text-danger">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> Produtos em Alerta
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Produto</th><th>Atual</th><th>Mínimo</th></tr></thead>
+          <tbody id="tbodyAlertas"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function carregarRelatorio() {
+  const params = new URLSearchParams();
+  const ini = document.getElementById('dataIni').value;
+  const fim = document.getElementById('dataFim').value;
+  if (ini) params.set('data_ini', ini);
+  if (fim) params.set('data_fim', fim);
+
+  fetch('/api/relatorio/resumo?' + params)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('totalEntradas').textContent = d.total_entradas.toFixed(0);
+      document.getElementById('totalSaidas').textContent = d.total_saidas.toFixed(0);
+      document.getElementById('totalAlertas').textContent = d.alertas.length;
+
+      // Tabela produtos
+      const tbP = document.getElementById('tbodyProdutos');
+      if (!d.por_produto.length) {
+        tbP.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Nenhum dado.</td></tr>';
+      } else {
+        tbP.innerHTML = d.por_produto.map(p => {
+          const saldo = p.entradas - p.saidas;
+          const saldoCls = saldo >= 0 ? 'text-success' : 'text-danger';
+          return `<tr>
+            <td><strong>${p.nome}</strong></td>
+            <td>${p.unidade}</td>
+            <td class="text-success">${p.entradas.toFixed(2)}</td>
+            <td class="text-danger">${p.saidas.toFixed(2)}</td>
+            <td class="${saldoCls} fw-semibold">${saldo >= 0 ? '+' : ''}${saldo.toFixed(2)}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // Tabela alertas
+      const tbA = document.getElementById('tbodyAlertas');
+      if (!d.alertas.length) {
+        tbA.innerHTML = '<tr><td colspan="3" class="text-center text-success py-3"><i class="bi bi-check-circle"></i> Nenhum alerta!</td></tr>';
+      } else {
+        tbA.innerHTML = d.alertas.map(a => `<tr>
+          <td><strong>${a.nome}</strong></td>
+          <td class="text-danger fw-bold">${a.quantidade} ${a.unidade}</td>
+          <td class="text-muted">${a.estoque_minimo} ${a.unidade}</td>
+        </tr>`).join('');
+      }
+    });
+}
+
+function limparFiltros() {
+  document.getElementById('dataIni').value = '';
+  document.getElementById('dataFim').value = '';
+  carregarRelatorio();
+}
+
+// Período padrão: mês atual
+const hoje = new Date();
+const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+document.getElementById('dataIni').value = ini.toISOString().split('T')[0];
+document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
+carregarRelatorio();
+</script>
+{% endblock %}

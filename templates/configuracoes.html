@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-gear me-2 text-primary"></i>Configurações</h1>
+</div>
+
+<div class="row g-4">
+  <!-- Empresa -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-building me-1"></i> Empresa</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nome da Empresa</label>
+          <input type="text" id="cEmpresa" class="form-control" value="{{ cfg.empresa_nome }}">
+        </div>
+        <button class="btn btn-primary" onclick="salvarConfig()">
+          <i class="bi bi-floppy"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-whatsapp me-1" style="color:#25d366"></i> WhatsApp (Evolution API)
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">URL da Evolution API</label>
+          <input type="url" id="cUrl" class="form-control" value="{{ cfg.whatsapp_url }}"
+            placeholder="http://localhost:8080">
+          <div class="form-text">Endereço onde a Evolution API está rodando.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">API Key</label>
+          <input type="password" id="cApikey" class="form-control" value="{{ cfg.whatsapp_apikey }}"
+            placeholder="sua-api-key">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nome da Instância</label>
+          <input type="text" id="cInstance" class="form-control" value="{{ cfg.whatsapp_instance }}"
+            placeholder="bnbflex">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Telefone da Gestora (com DDD)</label>
+          <input type="tel" id="cTelefone" class="form-control" value="{{ cfg.gestora_telefone }}"
+            placeholder="5511999999999">
+          <div class="form-text">Formato: código do país + DDD + número (ex: 5511999999999)</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" onclick="salvarConfig()">
+            <i class="bi bi-floppy"></i> Salvar
+          </button>
+          <button class="btn btn-outline-success" onclick="testarWhatsapp()">
+            <i class="bi bi-whatsapp"></i> Testar Conexão
+          </button>
+        </div>
+        <div id="statusWpp" class="mt-3" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guia rápido -->
+  <div class="col-12">
+    <div class="card border-info">
+      <div class="card-header bg-info bg-opacity-10 text-info">
+        <i class="bi bi-info-circle me-1"></i> Como configurar a Evolution API
+      </div>
+      <div class="card-body">
+        <ol class="mb-0">
+          <li class="mb-2">Instale a Evolution API no servidor: <code>docker run -p 8080:8080 atendai/evolution-api</code></li>
+          <li class="mb-2">Acesse o painel da Evolution API e crie uma instância (ex: <strong>bnbflex</strong>)</li>
+          <li class="mb-2">Conecte o WhatsApp escaneando o QR Code gerado</li>
+          <li class="mb-2">Copie a <strong>API Key</strong> e preencha os campos acima</li>
+          <li>Clique em <strong>Testar Conexão</strong> para verificar se está funcionando</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function salvarConfig() {
+  const payload = {
+    empresa_nome: document.getElementById('cEmpresa').value,
+    whatsapp_url: document.getElementById('cUrl').value,
+    whatsapp_apikey: document.getElementById('cApikey').value,
+    whatsapp_instance: document.getElementById('cInstance').value,
+    gestora_telefone: document.getElementById('cTelefone').value,
+  };
+  fetch('/api/configuracoes', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) showToast('Configurações salvas!');
+    else showToast('Erro ao salvar', 'danger');
+  });
+}
+
+function testarWhatsapp() {
+  const div = document.getElementById('statusWpp');
+  div.style.display = 'block';
+  div.innerHTML = '<div class="alert alert-secondary mb-0"><i class="bi bi-hourglass-split"></i> Testando...</div>';
+
+  fetch('/api/whatsapp/teste', {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        div.innerHTML = `<div class="alert alert-success mb-0">
+          <i class="bi bi-check-circle-fill"></i> <strong>Conectado!</strong> Estado: ${d.estado}
+        </div>`;
+      } else {
+        div.innerHTML = `<div class="alert alert-danger mb-0">
+          <i class="bi bi-x-circle-fill"></i> <strong>Desconectado.</strong> Estado: ${d.estado}
+          <br><small>Verifique a URL, API Key e se o WhatsApp está conectado na instância.</small>
+        </div>`;
+      }
+    }).catch(() => {
+      div.innerHTML = '<div class="alert alert-danger mb-0">Erro ao conectar com a API.</div>';
+    });
+}
+</script>
+{% endblock %}

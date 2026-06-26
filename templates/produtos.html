@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Produtos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-box-seam me-2 text-primary"></i>Produtos</h1>
+  <button class="btn btn-primary" onclick="abrirModal()">
+    <i class="bi bi-plus-lg"></i> Novo Produto
+  </button>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <input id="buscaInput" type="text" class="form-control form-control-sm" placeholder="Buscar produto...">
+      </div>
+      <div class="col-md-3">
+        <select id="categoriaFiltro" class="form-select form-select-sm">
+          <option value="">Todas as categorias</option>
+          {% for cat in categorias %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select id="alertaFiltro" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="1">Somente em alerta</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-sm btn-outline-secondary w-100" onclick="carregarProdutos()">
+          <i class="bi bi-search"></i> Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="tabelaProdutos">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Categoria</th>
+          <th>Unidade</th>
+          <th>Fornecedor</th>
+          <th>Custo</th>
+          <th>Quantidade</th>
+          <th>Est. Mínimo</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Produto -->
+<div class="modal fade" id="modalProduto" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitulo">Novo Produto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="produtoId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nome *</label>
+            <input type="text" id="fNome" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Categoria *</label>
+            <input type="text" id="fCategoria" class="form-control" list="listaCateg" required>
+            <datalist id="listaCateg">
+              {% for cat in categorias %}<option value="{{ cat }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Unidade *</label>
+            <select id="fUnidade" class="form-select">
+              <option value="un">Unidade (un)</option>
+              <option value="kg">Kilograma (kg)</option>
+              <option value="g">Grama (g)</option>
+              <option value="L">Litro (L)</option>
+              <option value="ml">Mililitro (ml)</option>
+              <option value="cx">Caixa (cx)</option>
+              <option value="pct">Pacote (pct)</option>
+              <option value="rolo">Rolo</option>
+              <option value="par">Par</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Fornecedor</label>
+            <input type="text" id="fFornecedor" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Custo (R$)</label>
+            <input type="number" id="fCusto" class="form-control" min="0" step="0.01" value="0">
+          </div>
+          <div class="col-md-6" id="divQtdInicial">
+            <label class="form-label fw-semibold">Quantidade Inicial</label>
+            <input type="number" id="fQuantidade" class="form-control" min="0" step="0.01" value="0">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Estoque Mínimo *</label>
+            <input type="number" id="fEstoqueMin" class="form-control" min="0" step="0.01" value="0">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="salvarProduto()">
+          <i class="bi bi-floppy"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const modal = new bootstrap.Modal(document.getElementById('modalProduto'));
+let editandoId = null;
+
+function abrirModal(id) {
+  editandoId = id || null;
+  document.getElementById('modalTitulo').textContent = id ? 'Editar Produto' : 'Novo Produto';
+  document.getElementById('divQtdInicial').style.display = id ? 'none' : '';
+
+  if (id) {
+    fetch('/api/produtos/' + id).then(r => r.json()).then(p => {
+      document.getElementById('produtoId').value = p.id;
+      document.getElementById('fNome').value = p.nome;
+      document.getElementById('fCategoria').value = p.categoria;
+      document.getElementById('fUnidade').value = p.unidade;
+      document.getElementById('fFornecedor').value = p.fornecedor || '';
+      document.getElementById('fCusto').value = p.custo;
+      document.getElementById('fEstoqueMin').value = p.estoque_minimo;
+    });
+  } else {
+    document.getElementById('fNome').value = '';
+    document.getElementById('fCategoria').value = '';
+    document.getElementById('fUnidade').value = 'un';
+    document.getElementById('fFornecedor').value = '';
+    document.getElementById('fCusto').value = '0';
+    document.getElementById('fQuantidade').value = '0';
+    document.getElementById('fEstoqueMin').value = '0';
+  }
+  modal.show();
+}
+
+function salvarProduto() {
+  const payload = {
+    nome: document.getElementById('fNome').value.trim(),
+    categoria: document.getElementById('fCategoria').value.trim(),
+    unidade: document.getElementById('fUnidade').value,
+    fornecedor: document.getElementById('fFornecedor').value.trim(),
+    custo: document.getElementById('fCusto').value,
+    estoque_minimo: document.getElementById('fEstoqueMin').value,
+    quantidade: document.getElementById('fQuantidade').value || '0',
+  };
+  if (!payload.nome || !payload.categoria) return showToast('Nome e categoria são obrigatórios', 'danger');
+
+  const url = editandoId ? `/api/produtos/${editandoId}` : '/api/produtos';
+  const method = editandoId ? 'PUT' : 'POST';
+
+  fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        modal.hide();
+        showToast('Produto salvo com sucesso!');
+        carregarProdutos();
+      } else showToast(d.erro || 'Erro ao salvar', 'danger');
+    });
+}
+
+function excluirProduto(id, nome) {
+  if (!confirm(`Excluir "${nome}"? Todos os movimentos serão removidos.`)) return;
+  fetch(`/api/produtos/${id}`, {method:'DELETE'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { showToast('Produto excluído'); carregarProdutos(); }
+    });
+}
+
+function carregarProdutos() {
+  const busca = document.getElementById('buscaInput').value;
+  const cat = document.getElementById('categoriaFiltro').value;
+  const alerta = document.getElementById('alertaFiltro').value;
+  const params = new URLSearchParams();
+  if (busca) params.set('busca', busca);
+  if (cat) params.set('categoria', cat);
+  if (alerta) params.set('alerta', alerta);
+
+  fetch('/api/produtos?' + params)
+    .then(r => r.json())
+    .then(produtos => {
+      const tbody = document.getElementById('tbody');
+      if (!produtos.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Nenhum produto encontrado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = produtos.map(p => {
+        const emAlerta = p.quantidade <= p.estoque_minimo;
+        const badge = emAlerta
+          ? '<span class="badge badge-alerta"><i class="bi bi-exclamation-triangle"></i> Alerta</span>'
+          : '<span class="badge badge-ok"><i class="bi bi-check-circle"></i> OK</span>';
+        const qtdClass = emAlerta ? 'text-danger fw-bold' : '';
+        return `<tr>
+          <td><strong>${p.nome}</strong></td>
+          <td>${p.categoria}</td>
+          <td>${p.unidade}</td>
+          <td>${p.fornecedor || '—'}</td>
+          <td>${p.custo > 0 ? 'R$ ' + Number(p.custo).toFixed(2) : '—'}</td>
+          <td class="${qtdClass}">${p.quantidade} ${p.unidade}</td>
+          <td>${p.estoque_minimo} ${p.unidade}</td>
+          <td>${badge}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModal(${p.id})">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="excluirProduto(${p.id}, '${p.nome.replace(/'/g,"\\'")}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+    });
+}
+
+document.getElementById('buscaInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') carregarProdutos();
+});
+
+// Ler parâmetro alerta da URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('alerta')) document.getElementById('alertaFiltro').value = '1';
+
+carregarProdutos();
+</script>
+{% endblock %}

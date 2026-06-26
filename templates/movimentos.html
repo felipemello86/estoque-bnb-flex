@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Movimentos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-arrow-left-right me-2 text-primary"></i>Movimentos</h1>
+  <button class="btn btn-primary" onclick="abrirModal('entrada')">
+    <i class="bi bi-plus-lg"></i> Registrar Movimento
+  </button>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <button class="btn btn-success w-100 py-3" onclick="abrirModal('entrada')">
+      <i class="bi bi-plus-circle fs-4 d-block mb-1"></i>
+      <strong>Entrada de Material</strong>
+    </button>
+  </div>
+  <div class="col-md-6">
+    <button class="btn btn-danger w-100 py-3" onclick="abrirModal('saida')">
+      <i class="bi bi-dash-circle fs-4 d-block mb-1"></i>
+      <strong>Saída de Material</strong>
+    </button>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <select id="filtroTipo" class="form-select form-select-sm">
+          <option value="">Todos os tipos</option>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select id="filtroProduto" class="form-select form-select-sm">
+          <option value="">Todos os produtos</option>
+          {% for p in produtos %}
+          <option value="{{ p.id }}">{{ p.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <input type="date" id="filtroIni" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <input type="date" id="filtroFim" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-sm btn-outline-secondary w-100" onclick="carregarMovimentos()">
+          <i class="bi bi-search"></i> Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Produto</th>
+          <th>Tipo</th>
+          <th>Quantidade</th>
+          <th>Usuário</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Movimento -->
+<div class="modal fade" id="modalMovimento" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" id="modalHeader">
+        <h5 class="modal-title" id="modalTitulo">Registrar Movimento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="btn-group w-100 mb-2" role="group">
+              <input type="radio" class="btn-check" name="tipoMov" id="tipoEntrada" value="entrada">
+              <label class="btn btn-outline-success" for="tipoEntrada">
+                <i class="bi bi-plus-circle"></i> Entrada
+              </label>
+              <input type="radio" class="btn-check" name="tipoMov" id="tipoSaida" value="saida">
+              <label class="btn btn-outline-danger" for="tipoSaida">
+                <i class="bi bi-dash-circle"></i> Saída
+              </label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Produto *</label>
+            <select id="mProduto" class="form-select">
+              <option value="">Selecione o produto...</option>
+              {% for p in produtos %}
+              <option value="{{ p.id }}" data-unidade="{{ p.unidade }}">{{ p.nome }} ({{ p.unidade }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Quantidade *</label>
+            <div class="input-group">
+              <input type="number" id="mQtd" class="form-control" min="0.01" step="0.01">
+              <span class="input-group-text" id="unidadeLabel">un</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Usuário</label>
+            <input type="text" id="mUsuario" class="form-control" value="Responsável">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Observação</label>
+            <textarea id="mObs" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="col-12">
+            <div class="alert alert-info p-2 mb-0 small" id="alertaEstoque" style="display:none">
+              <i class="bi bi-info-circle"></i> <span id="alertaTexto"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSalvar" onclick="registrarMovimento()">
+          <i class="bi bi-floppy"></i> Registrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const modal = new bootstrap.Modal(document.getElementById('modalMovimento'));
+
+document.getElementById('mProduto').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  const unidade = opt.dataset.unidade || 'un';
+  document.getElementById('unidadeLabel').textContent = unidade;
+
+  const pid = this.value;
+  if (pid) {
+    fetch('/api/produtos/' + pid).then(r => r.json()).then(p => {
+      const alerta = document.getElementById('alertaEstoque');
+      const txt = document.getElementById('alertaTexto');
+      alerta.style.display = 'block';
+      txt.textContent = `Estoque atual: ${p.quantidade} ${p.unidade} | Mínimo: ${p.estoque_minimo} ${p.unidade}`;
+    });
+  }
+});
+
+function abrirModal(tipo) {
+  document.getElementById('mProduto').value = '';
+  document.getElementById('mQtd').value = '';
+  document.getElementById('mObs').value = '';
+  document.getElementById('alertaEstoque').style.display = 'none';
+  document.getElementById('unidadeLabel').textContent = 'un';
+
+  if (tipo === 'entrada') document.getElementById('tipoEntrada').checked = true;
+  else document.getElementById('tipoSaida').checked = true;
+
+  modal.show();
+}
+
+function registrarMovimento() {
+  const tipo = document.querySelector('input[name="tipoMov"]:checked')?.value;
+  const produto_id = document.getElementById('mProduto').value;
+  const quantidade = parseFloat(document.getElementById('mQtd').value);
+
+  if (!tipo || !produto_id || !quantidade || quantidade <= 0) {
+    return showToast('Preencha todos os campos obrigatórios', 'danger');
+  }
+
+  const payload = {
+    produto_id, tipo, quantidade,
+    observacao: document.getElementById('mObs').value,
+    usuario: document.getElementById('mUsuario').value || 'Usuário',
+  };
+
+  fetch('/api/movimentos', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      modal.hide();
+      let msg = `Movimento registrado! Estoque atual: ${d.quantidade_atual}`;
+      if (d.em_alerta) msg += ' ⚠️ Produto em alerta!';
+      if (d.alerta_whatsapp) msg += ' 📱 Alerta WhatsApp enviado!';
+      showToast(msg, d.em_alerta ? 'warning' : 'success');
+      carregarMovimentos();
+    } else {
+      showToast(d.erro || 'Erro ao registrar', 'danger');
+    }
+  });
+}
+
+function carregarMovimentos() {
+  const params = new URLSearchParams();
+  const tipo = document.getElementById('filtroTipo').value;
+  const pid = document.getElementById('filtroProduto').value;
+  const ini = document.getElementById('filtroIni').value;
+  const fim = document.getElementById('filtroFim').value;
+  if (tipo) params.set('tipo', tipo);
+  if (pid) params.set('produto_id', pid);
+  if (ini) params.set('data_ini', ini);
+  if (fim) params.set('data_fim', fim);
+  params.set('limit', 100);
+
+  fetch('/api/movimentos?' + params)
+    .then(r => r.json())
+    .then(movs => {
+      const tbody = document.getElementById('tbody');
+      if (!movs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Nenhum movimento encontrado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = movs.map(m => {
+        const badge = m.tipo === 'entrada'
+          ? '<span class="badge badge-ok"><i class="bi bi-plus-lg"></i> Entrada</span>'
+          : '<span class="badge badge-alerta"><i class="bi bi-dash-lg"></i> Saída</span>';
+        return `<tr>
+          <td style="white-space:nowrap;font-size:.85rem">${m.criado_em.slice(0,16)}</td>
+          <td><strong>${m.produto_nome}</strong></td>
+          <td>${badge}</td>
+          <td>${m.quantidade} ${m.unidade}</td>
+          <td>${m.usuario || '—'}</td>
+          <td class="text-muted">${m.observacao || '—'}</td>
+        </tr>`;
+      }).join('');
+    });
+}
+
+carregarMovimentos();
+</script>
+{% endblock %}
