@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = 'bnbflex2024secretkey'
 
+# Cria as tabelas ao iniciar (funciona com gunicorn e direto)
+init_db()
+
 
 # ─── Páginas ──────────────────────────────────────────────────────────────────
 
