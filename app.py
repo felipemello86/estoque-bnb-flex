@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from database import init_db, get_db, get_config, set_config, fetchall, fetchone, execute
 from whatsapp import enviar_alerta_estoque, testar_conexao
 import logging
+import threading
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -262,21 +263,24 @@ def api_registrar_movimento():
     execute(conn, 'UPDATE produtos SET quantidade = %s WHERE id = %s', (nova_qtd, produto_id))
     conn.close()
 
-    alerta_disparado = False
-    if nova_qtd <= produto['estoque_minimo']:
-        try:
-            alerta_disparado = enviar_alerta_estoque(
-                produto['nome'], nova_qtd,
-                produto['estoque_minimo'], produto['unidade']
-            )
-        except Exception as e:
-            logger.error(f"Erro ao enviar alerta: {e}")
+    em_alerta = nova_qtd <= produto['estoque_minimo']
+
+    if em_alerta:
+        def enviar_bg():
+            try:
+                enviar_alerta_estoque(
+                    produto['nome'], nova_qtd,
+                    produto['estoque_minimo'], produto['unidade']
+                )
+            except Exception as e:
+                logger.error(f"Erro ao enviar alerta: {e}")
+        threading.Thread(target=enviar_bg, daemon=True).start()
 
     return jsonify({
         'ok': True,
         'quantidade_atual': nova_qtd,
-        'em_alerta': nova_qtd <= produto['estoque_minimo'],
-        'alerta_whatsapp': alerta_disparado
+        'em_alerta': em_alerta,
+        'alerta_whatsapp': em_alerta
     })
 
 
@@ -362,7 +366,16 @@ def api_testar_whatsapp():
     instance = get_config('whatsapp_instance')
     logger.info(f"Teste WPP — url={repr(url)}, apikey={repr(apikey)}, instance={repr(instance)}")
     ok, estado = testar_conexao()
-    return jsonify({'ok': ok, 'estado': estado})
+    # Traduz estados para mensagens amigáveis
+    mensagens = {
+        'open': 'Conectado',
+        'connecting': 'Reconectando... aguarde 1 min e teste novamente',
+        'close': 'Desconectado',
+        'unknown': 'Estado desconhecido',
+        'Configurações incompletas': 'Configurações incompletas',
+    }
+    estado_msg = mensagens.get(estado, estado)
+    return jsonify({'ok': ok, 'estado': estado_msg})
 
 
 # ──────────────────────────────────────────────────────────────────────────────
