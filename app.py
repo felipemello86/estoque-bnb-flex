@@ -341,15 +341,26 @@ def api_relatorio_resumo():
 @app.route('/api/configuracoes', methods=['POST'])
 def api_salvar_config():
     data = request.json
+    logger.info(f"Salvando configurações: {list(data.keys())}")
     campos = ['whatsapp_url', 'whatsapp_apikey', 'whatsapp_instance', 'gestora_telefone', 'empresa_nome']
     for campo in campos:
         if campo in data:
             set_config(campo, data[campo])
+            logger.info(f"set_config({campo}) = '{data[campo][:10]}...' " if data[campo] else f"set_config({campo}) = ''")
+    # Verifica o que foi salvo
+    url = get_config('whatsapp_url')
+    apikey = get_config('whatsapp_apikey')
+    instance = get_config('whatsapp_instance')
+    logger.info(f"Após salvar — url={bool(url)}, apikey={bool(apikey)}, instance={bool(instance)}")
     return jsonify({'ok': True})
 
 
 @app.route('/api/whatsapp/teste', methods=['POST'])
 def api_testar_whatsapp():
+    url = get_config('whatsapp_url')
+    apikey = get_config('whatsapp_apikey')
+    instance = get_config('whatsapp_instance')
+    logger.info(f"Teste WPP — url={repr(url)}, apikey={repr(apikey)}, instance={repr(instance)}")
     ok, estado = testar_conexao()
     return jsonify({'ok': ok, 'estado': estado})
 
