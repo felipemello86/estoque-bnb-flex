@@ -64,9 +64,11 @@ def testar_conexao():
 
     try:
         response = requests.get(endpoint, headers=headers, timeout=10)
+        logger.info(f"Evolution API status {response.status_code}: {response.text[:200]}")
         data = response.json()
         state = data.get('instance', {}).get('state', 'unknown')
         connected = state == 'open'
         return connected, state
     except Exception as e:
+        logger.error(f"Erro ao testar conexão: {e}")
         return False, str(e)
