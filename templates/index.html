@@ -102,7 +102,7 @@
           {% for m in ultimos_movimentos %}
           <tr>
             <td class="text-muted" style="white-space:nowrap;font-size:.8rem">
-              {{ m.criado_em[:16] }}
+              {{ m.criado_em.strftime('%d/%m/%Y %H:%M') if m.criado_em else '—' }}
             </td>
             <td>{{ m.produto_nome }}</td>
             <td>
