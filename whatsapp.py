@@ -17,8 +17,9 @@ def enviar_alerta_estoque(produto_nome, quantidade_atual, estoque_minimo, unidad
         logger.warning('WhatsApp não configurado. Alerta não enviado.')
         return False
 
-    # Normaliza telefone (apenas dígitos)
+    # Normaliza telefone (apenas dígitos) e adiciona sufixo WhatsApp
     telefone = ''.join(filter(str.isdigit, telefone))
+    numero_wpp = f"{telefone}@s.whatsapp.net"
 
     mensagem = (
         f"⚠️ *ALERTA DE ESTOQUE - {empresa}*\n\n"
@@ -31,7 +32,7 @@ def enviar_alerta_estoque(produto_nome, quantidade_atual, estoque_minimo, unidad
     endpoint = f"{url.rstrip('/')}/message/sendText/{instance}"
 
     payload = {
-        "number": telefone,
+        "number": numero_wpp,
         "text": mensagem
     }
 
