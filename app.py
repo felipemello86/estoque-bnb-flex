@@ -378,6 +378,18 @@ def api_testar_whatsapp():
     return jsonify({'ok': ok, 'estado': estado_msg})
 
 
+@app.route('/api/whatsapp/enviar_teste', methods=['POST'])
+def api_enviar_teste_whatsapp():
+    """Envia uma mensagem de teste real para o telefone da gestora."""
+    enviado = enviar_alerta_estoque(
+        produto_nome='TESTE',
+        quantidade_atual=0,
+        estoque_minimo=1,
+        unidade='un'
+    )
+    return jsonify({'ok': enviado, 'mensagem': 'Mensagem enviada!' if enviado else 'Falha ao enviar'})
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
