@@ -380,14 +380,16 @@ def api_testar_whatsapp():
 
 @app.route('/api/whatsapp/enviar_teste', methods=['POST'])
 def api_enviar_teste_whatsapp():
-    """Envia uma mensagem de teste real para o telefone da gestora."""
-    enviado = enviar_alerta_estoque(
-        produto_nome='TESTE',
-        quantidade_atual=0,
-        estoque_minimo=1,
-        unidade='un'
-    )
-    return jsonify({'ok': enviado, 'mensagem': 'Mensagem enviada!' if enviado else 'Falha ao enviar'})
+    """Envia uma mensagem de teste real para o telefone da gestora (em background)."""
+    def enviar_bg():
+        enviar_alerta_estoque(
+            produto_nome='TESTE',
+            quantidade_atual=0,
+            estoque_minimo=1,
+            unidade='un'
+        )
+    threading.Thread(target=enviar_bg, daemon=True).start()
+    return jsonify({'ok': True, 'mensagem': 'Enviando em background... verifique o WhatsApp em ~30 segundos'})
 
 
 # ──────────────────────────────────────────────────────────────────────────────
