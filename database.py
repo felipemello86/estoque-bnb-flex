@@ -83,12 +83,7 @@ def fetchone(conn, query, params=()):
 def execute(conn, query, params=()):
     with conn.cursor() as cur:
         cur.execute(query, params)
-        try:
-            result = cur.fetchone()
-        except Exception:
-            result = None
     conn.commit()
-    return result
 
 
 def get_config(chave):
