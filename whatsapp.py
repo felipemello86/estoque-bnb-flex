@@ -41,7 +41,9 @@ def enviar_alerta_estoque(produto_nome, quantidade_atual, estoque_minimo, unidad
     }
 
     try:
+        logger.info(f"Enviando alerta para {telefone} via {endpoint}")
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        logger.info(f"Resposta Evolution API: {response.status_code} — {response.text[:300]}")
         response.raise_for_status()
         logger.info(f"Alerta WhatsApp enviado para {telefone}: {produto_nome}")
         return True
